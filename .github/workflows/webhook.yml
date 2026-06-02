@@ -1,0 +1,17 @@
+name: Webhook Triggered Workflow
+
+on:
+  repository_dispatch:
+    types: [my-custom-webhook-event] # Defines the custom filter
+
+jobs:
+  run-action:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Read Webhook Payload
+        run: |
+          echo "Triggered by: ${{ github.event.client_payload.triggered_by }}"
+          echo "Message: ${{ github.event.client_payload.message }}"

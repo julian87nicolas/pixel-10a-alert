@@ -25,7 +25,7 @@ def parse_price(text):
 def search_mercadolibre():
     url = (
         "https://listado.mercadolibre.com.ar/"
-        "google-pixel-10a"
+        "celulares-telefonos/celulares-smartphones/google/google-pixel-10a_OrderId_PRICE_NoIndex_True_SHIPPING*ORIGIN_10215068#unapplied_filter_id%3Dinstallments%26unapplied_filter_name%3DCuotas%26unapplied_value_id%3Dgood_financing%26unapplied_value_name%3DMejor+precio+en+cuotas%26unapplied_autoselect%3Dfalse"
     )
 
     print("Consultando MercadoLibre")
@@ -51,7 +51,7 @@ def search_mercadolibre():
 
     print(
         "PUBLICACIONES:",
-        len(cards)
+        len(cards)  
     )
 
     for card in cards[:20]:
