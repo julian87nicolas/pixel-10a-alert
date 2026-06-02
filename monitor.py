@@ -40,6 +40,11 @@ ALLOWED_DOMAINS = [
     "mercadolibre.com.ar",
 ]
 
+ARGENTINA_HINTS = [
+    ".com.ar",
+    ".ar"
+]
+
 STATE_FILE = "last_seen.json"
 
 HEADERS = {
@@ -107,9 +112,14 @@ def send_telegram(message):
 def allowed_domain(url):
     hostname = urlparse(url).netloc.lower()
 
+    # Lista blanca explícita
     for domain in ALLOWED_DOMAINS:
         if domain in hostname:
             return True
+
+    # Fallback para tiendas argentinas desconocidas
+    if hostname.endswith(".com.ar"):
+        return True
 
     return False
 
