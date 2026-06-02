@@ -10,6 +10,17 @@ SEARCH_TERMS = [
     "Google Pixel 10a",
     "Pixel 10a",
     "Google Pixel 10 A",
+    '"Google Pixel 10a" Argentina',
+    '"Google Pixel 10a" precio Argentina',
+    '"Google Pixel 10a" comprar Argentina',
+    'site:celularesindustriales.com.ar "Google Pixel 10a"',
+    'site:heyshop.com.ar "Google Pixel 10a"',
+    'site:undertec.store "Google Pixel 10a"',
+    'site:mercadolibre.com.ar "Google Pixel 10a"',
+    'site:start.com.ar "Google Pixel 10a"',
+    'site:diggit.com.ar "Google Pixel 10a"',
+    'site:spacegadget.com.ar "Google Pixel 10a"',
+    'site:compugarden.com.ar "Google Pixel 10a"'
 ]
 
 ALLOWED_DOMAINS = [
