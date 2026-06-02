@@ -20,7 +20,7 @@ SEARCH_TERMS = [
     'site:start.com.ar "Google Pixel 10a"',
     'site:diggit.com.ar "Google Pixel 10a"',
     'site:spacegadget.com.ar "Google Pixel 10a"',
-    'site:compugarden.com.ar "Google Pixel 10a"'
+    'site:compugarden.com.ar "Google Pixel 10a"',
 ]
 
 ALLOWED_DOMAINS = [
@@ -40,11 +40,6 @@ ALLOWED_DOMAINS = [
     "mercadolibre.com.ar",
 ]
 
-ARGENTINA_HINTS = [
-    ".com.ar",
-    ".ar"
-]
-
 STATE_FILE = "last_seen.json"
 
 HEADERS = {
@@ -59,7 +54,6 @@ HEADERS = {
 
 def load_state():
     if not os.path.exists(STATE_FILE):
-        print("INFO: last_seen.json no existe")
         return {}
 
     try:
@@ -67,12 +61,9 @@ def load_state():
             content = f.read().strip()
 
             if not content:
-                print("INFO: last_seen.json vacío")
                 return {}
 
-            state = json.loads(content)
-            print(f"INFO: {len(state)} URLs cargadas")
-            return state
+            return json.loads(content)
 
     except Exception as e:
         print(f"ERROR cargando estado: {e}")
@@ -87,8 +78,6 @@ def save_state(state):
             indent=2,
             ensure_ascii=False
         )
-
-    print(f"INFO: guardadas {len(state)} URLs")
 
 
 def send_telegram(message):
@@ -112,14 +101,9 @@ def send_telegram(message):
 def allowed_domain(url):
     hostname = urlparse(url).netloc.lower()
 
-    # Lista blanca explícita
     for domain in ALLOWED_DOMAINS:
         if domain in hostname:
             return True
-
-    # Fallback para tiendas argentinas desconocidas
-    if hostname.endswith(".com.ar"):
-        return True
 
     return False
 
@@ -136,7 +120,10 @@ def extract_real_url(ddg_url):
 
 
 def search_duckduckgo(query):
-    print(f"\n===== BUSCANDO: {query} =====")
+    print("\n===================================")
+    print("QUERY ENVIADA")
+    print(query)
+    print("===================================")
 
     response = requests.post(
         "https://html.duckduckgo.com/html/",
@@ -145,17 +132,18 @@ def search_duckduckgo(query):
         timeout=30,
     )
 
-    print("DDG STATUS:", response.status_code)
+    print("STATUS:", response.status_code)
+    print("URL FINAL:", response.url)
 
     response.raise_for_status()
 
     soup = BeautifulSoup(response.text, "html.parser")
 
-    results = []
-
     links = soup.select("a.result__a")
 
-    print(f"RESULTADOS DDG: {len(links)}")
+    print("RESULTADOS DDG:", len(links))
+
+    results = []
 
     for link in links:
         href = link.get("href")
@@ -163,27 +151,29 @@ def search_duckduckgo(query):
         if not href:
             continue
 
+        title = link.get_text(" ", strip=True)
+
         real_url = extract_real_url(href)
 
-        print("ENCONTRADO:", real_url)
+        print()
+        print("TITULO:", title)
+        print("URL:", real_url)
 
-        if not allowed_domain(real_url):
+        if allowed_domain(real_url):
+            print("ACEPTADO")
+        else:
             print("RECHAZADO")
             continue
 
-        print("ACEPTADO")
+        results.append(
+            {
+                "title": title,
+                "url": real_url,
+            }
+        )
 
-        title = link.get_text(" ", strip=True)
-
-        print(f"ACEPTADO: {title}")
-        print(f"URL: {real_url}")
-
-        results.append({
-            "title": title,
-            "url": real_url,
-        })
-
-    print(f"RESULTADOS FILTRADOS: {len(results)}")
+    print()
+    print("RESULTADOS FILTRADOS:", len(results))
 
     return results
 
@@ -205,8 +195,6 @@ def main():
                 url = result["url"]
 
                 if url not in state:
-                    print("NUEVA URL:", url)
-
                     state[url] = {
                         "title": result["title"],
                         "first_seen": int(time.time()),
@@ -217,7 +205,8 @@ def main():
         except Exception as e:
             print("ERROR:", e)
 
-    print(f"\nNUEVOS RESULTADOS: {len(found_new)}")
+    print()
+    print("NUEVOS RESULTADOS:", len(found_new))
 
     if found_new:
         msg = [
