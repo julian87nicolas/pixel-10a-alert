@@ -1,0 +1,17 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Pixel Monitor",
+            "type": "python",
+            "request": "launch",
+            "program": "${workspaceFolder}/monitor.py",
+            "console": "integratedTerminal",
+            "justMyCode": true,
+            "env": {
+                "TELEGRAM_TOKEN": "TU_TOKEN",
+                "TELEGRAM_CHAT_ID": "810591648"
+            }
+        }
+    ]
+}

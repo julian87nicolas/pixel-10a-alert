@@ -1,193 +1,88 @@
-import json
-import os
-import time
-from urllib.parse import urlparse, parse_qs, unquote
-
-import requests
-from bs4 import BeautifulSoup
-
-SEARCH_TERMS = [
-    "Google Pixel 10a",
-    "Pixel 10a",
-    "Google Pixel 10 A",
-]
-
-ALLOWED_DOMAINS = [
-    "fravega.com",
-    "megatone.net",
-    "garbarino.com",
-    "musimundo.com",
-    "oncity.com",
-    "naldo.com.ar",
-    "celularesindustriales.com.ar",
-    "heyshop.com.ar",
-    "undertec.store",
-    "start.com.ar",
-    "diggit.com.ar",
-    "spacegadget.com.ar",
-    "compugarden.com.ar",
-    "mercadolibre.com.ar",
-]
-
-STATE_FILE = "last_seen.json"
-
-HEADERS = {
-    "User-Agent": (
-        "Mozilla/5.0 (X11; Linux x86_64) "
-        "AppleWebKit/537.36 "
-        "(KHTML, like Gecko) "
-        "Chrome/137.0 Safari/537.36"
-    )
-}
-
-
-def load_state():
-    if not os.path.exists(STATE_FILE):
-        return {}
-
-    try:
-        with open(STATE_FILE, "r", encoding="utf-8") as f:
-            content = f.read().strip()
-
-            if not content:
-                return {}
-
-            return json.loads(content)
-
-    except Exception:
-        return {}
-
-
-def save_state(state):
-    with open(STATE_FILE, "w", encoding="utf-8") as f:
-        json.dump(state, f, indent=2)
-
-
-def send_telegram(message):
-    token = os.environ["TELEGRAM_TOKEN"]
-    chat_id = os.environ["TELEGRAM_CHAT_ID"]
-
-    requests.post(
-        f"https://api.telegram.org/bot{token}/sendMessage",
-        data={
-            "chat_id": chat_id,
-            "text": message,
-            "disable_web_page_preview": False,
-        },
-        timeout=30,
-    )
-
-
-def allowed_domain(url):
-    hostname = urlparse(url).netloc.lower()
-
-    for domain in ALLOWED_DOMAINS:
-        if domain in hostname:
-            return True
-
-    return False
-
-
-def extract_real_url(ddg_url):
-    """
-    Convierte:
-    https://duckduckgo.com/l/?uddg=https%3A...
-    en
-    https://...
-    """
-
-    parsed = urlparse(ddg_url)
-
-    qs = parse_qs(parsed.query)
-
-    if "uddg" in qs:
-        return unquote(qs["uddg"][0])
-
-    return ddg_url
-
-
-def search_duckduckgo(query):
-    url = "https://html.duckduckgo.com/html/"
-
-    response = requests.post(
-        url,
-        data={"q": query},
-        headers=HEADERS,
-        timeout=30,
-    )
-
-    response.raise_for_status()
-
-    soup = BeautifulSoup(response.text, "html.parser")
-
-    results = []
-
-    for link in soup.select("a.result__a"):
-        href = link.get("href")
-
-        if not href:
-            continue
-
-        real_url = extract_real_url(href)
-
-        if not allowed_domain(real_url):
-            continue
-
-        title = link.get_text(" ", strip=True)
-
-        results.append(
-            {
-                "title": title,
-                "url": real_url,
-            }
-        )
-
-    return results
-
-
-def is_new_result(url, state):
-    return url not in state
+from mercadolibre import search_mercadolibre
+from price_analyzer import (
+    get_deals,
+    get_good_prices,
+    get_top3_cheapest,
+)
+from telegram_bot import send_telegram
 
 
 def main():
-    state = load_state()
+    print("===================================")
+    print("PIXEL 10A MONITOR")
+    print("===================================")
 
-    found_new = []
+    results = []
 
-    for term in SEARCH_TERMS:
-        print(f"Searching: {term}")
+    try:
+        results.extend(search_mercadolibre())
+    except Exception as e:
+        print("ERROR MercadoLibre:", e)
 
-        try:
-            results = search_duckduckgo(term)
+    print()
+    print(f"TOTAL RESULTADOS: {len(results)}")
 
-            for result in results:
-                url = result["url"]
+    for item in results:
+        print(item)
 
-                if is_new_result(url, state):
-                    state[url] = {
-                        "title": result["title"],
-                        "first_seen": int(time.time()),
-                    }
+    deals = get_deals(results)
+    good_prices = get_good_prices(results)
+    cheapest = get_top3_cheapest(results)
 
-                    found_new.append(result)
-
-        except Exception as e:
-            print(f"ERROR: {e}")
-
-    if found_new:
+    if deals:
         msg = [
-            "📱 NUEVAS COINCIDENCIAS PARA GOOGLE PIXEL 10A",
-            "",
+            "🚨 PIXEL 10A EN OFERTA",
+            ""
         ]
 
-        for item in found_new:
-            msg.append(f"• {item['title']}")
+        for item in deals:
+            msg.append(
+                f"${item['price']:,}".replace(",", ".")
+            )
+            msg.append(item["store"])
             msg.append(item["url"])
             msg.append("")
 
         send_telegram("\n".join(msg))
 
-    save_state(state)
+    elif good_prices:
+        msg = [
+            "🟡 PIXEL 10A A BUEN PRECIO",
+            ""
+        ]
+
+        for item in good_prices:
+            msg.append(
+                f"${item['price']:,}".replace(",", ".")
+            )
+            msg.append(item["store"])
+            msg.append(item["url"])
+            msg.append("")
+
+        send_telegram("\n".join(msg))
+
+    elif cheapest:
+        msg = [
+            "📊 ESTADO DEL MONITOREO",
+            "",
+            "No se encontraron equipos por debajo de $1.000.000",
+            "",
+            "Top 3 precios:",
+            ""
+        ]
+
+        for idx, item in enumerate(cheapest, start=1):
+            msg.append(
+                f"{idx}. ${item['price']:,}".replace(",", ".")
+            )
+            msg.append(item["store"])
+            msg.append(item["url"])
+            msg.append("")
+
+        send_telegram("\n".join(msg))
+
+    else:
+        print("No se encontraron publicaciones")
 
 
 if __name__ == "__main__":
