@@ -144,8 +144,13 @@ def search_duckduckgo(query):
 
         real_url = extract_real_url(href)
 
+        print("ENCONTRADO:", real_url)
+
         if not allowed_domain(real_url):
+            print("RECHAZADO")
             continue
+
+        print("ACEPTADO")
 
         title = link.get_text(" ", strip=True)
 
